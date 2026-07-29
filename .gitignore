@@ -1,0 +1,10 @@
+build/
+*.exe
+*.obj
+*.o
+*.ilk
+*.pdb
+*.log
+*.tmp
+.vs/
+node_modules/

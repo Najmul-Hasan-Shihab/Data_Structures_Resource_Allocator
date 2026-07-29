@@ -1,0 +1,1 @@
+Start the C++ web backend first by running `emergency_allocator_web.exe`, then open `http://localhost:8080/` in a browser.
