@@ -35,17 +35,20 @@ public:
             return 1;
         }
 
-        SOCKET serverSocket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET serverSocket = ::socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
         if (serverSocket == INVALID_SOCKET) {
             std::cerr << "Failed to create server socket.\n";
             WSACleanup();
             return 1;
         }
 
-        sockaddr_in serverAddress{};
-        serverAddress.sin_family = AF_INET;
-        serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        serverAddress.sin_port = htons(port_);
+        const int v6OnlyDisabled = 0;
+        setsockopt(serverSocket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&v6OnlyDisabled), sizeof(v6OnlyDisabled));
+
+        sockaddr_in6 serverAddress{};
+        serverAddress.sin6_family = AF_INET6;
+        serverAddress.sin6_addr = in6addr_any;
+        serverAddress.sin6_port = htons(port_);
 
         const int reuseEnabled = 1;
         setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuseEnabled), sizeof(reuseEnabled));
@@ -65,11 +68,12 @@ public:
         }
 
         std::cout << "Web server running at http://localhost:" << port_ << "/\n";
+        std::cout << "If localhost is slow, use http://127.0.0.1:" << port_ << "/\n";
         std::cout << "Serving UI from " << root_.string() << "\n";
         std::cout << "Press Ctrl+C to stop.\n";
 
         while (true) {
-            sockaddr_in clientAddress{};
+            sockaddr_storage clientAddress{};
             int clientLength = sizeof(clientAddress);
             SOCKET clientSocket = accept(serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientLength);
             if (clientSocket == INVALID_SOCKET) {
@@ -212,6 +216,19 @@ private:
             if (request.path == "/api/state") {
                 return jsonResponse(stateJson());
             }
+            if (request.path == "/api/route") {
+                const auto query = parseFormUrlEncoded(request.query);
+                if (!hasFields(query, {"patientId"})) {
+                    return badRequest("Missing patientId field.");
+                }
+                const int patientId = toInt(query, "patientId");
+                const int resourceId = query.find("resourceId") != query.end() ? toInt(query, "resourceId") : -1;
+                auto route = service_.routeForPatient(patientId, resourceId);
+                if (!route.has_value()) {
+                    return badRequest("No route suggestion available.");
+                }
+                return jsonResponse(routeJson(patientId, route->resourceId, route.value()));
+            }
             return notFound();
         }
 
@@ -224,8 +241,15 @@ private:
                 bool ok = service_.addResource(toInt(form, "id"), form.at("type"), toInt(form, "location"), true);
                 return ok ? jsonResponse(stateJson()) : badRequest("Resource already exists.");
             }
+            if (request.path == "/api/road") {
+                if (!hasFields(form, {"from", "to", "weight"})) {
+                    return badRequest("Missing road fields.");
+                }
+                service_.addRoad(toInt(form, "from"), toInt(form, "to"), toInt(form, "weight"), true);
+                return jsonResponse(stateJson());
+            }
             if (request.path == "/api/emergency") {
-                if (!hasFields(form, {"id", "patientName", "severity", "type", "requiredResourceType"})) {
+                if (!hasFields(form, {"id", "patientName", "severity", "type", "requiredResourceType", "location"})) {
                     return badRequest("Missing emergency fields.");
                 }
                 bool ok = service_.addEmergency(
@@ -234,6 +258,7 @@ private:
                     toInt(form, "severity"),
                     form.at("type"),
                     form.at("requiredResourceType"),
+                    toInt(form, "location"),
                     true);
                 return ok ? jsonResponse(stateJson()) : badRequest("Emergency already exists.");
             }
@@ -352,8 +377,23 @@ private:
                << "\"waitingCount\":" << state.waitingCount << ','
                << "\"pending\":" << emergenciesJson(state.pending) << ','
                << "\"resources\":" << resourcesJson(state.resources) << ','
+               << "\"orderedResources\":" << resourcesJson(state.orderedResources) << ','
+               << "\"patients\":" << patientsJson(state.patients) << ','
                << "\"waiting\":" << emergenciesJson(state.waiting) << ','
                << "\"history\":" << historyJson(state.history)
+               << '}';
+        return output.str();
+    }
+
+    std::string routeJson(int patientId, int resourceId, const RouteSuggestion& route) const {
+        std::ostringstream output;
+        output << '{'
+               << "\"patientId\":" << patientId << ','
+               << "\"resourceId\":" << resourceId << ','
+               << "\"fromLocation\":" << route.fromLocation << ','
+               << "\"toLocation\":" << route.toLocation << ','
+               << "\"distance\":" << route.distance << ','
+               << "\"path\":" << pathJson(route.path)
                << '}';
         return output.str();
     }
@@ -395,6 +435,42 @@ private:
                    << "\"assignedEmergencyId\":" << resource.assignedEmergencyId << ','
                    << "\"assignedEmergencyName\":\"" << jsonEscape(resource.assignedEmergencyName) << "\""
                    << '}';
+        }
+        output << ']';
+        return output.str();
+    }
+
+    static std::string patientsJson(const std::vector<PatientRecord>& patients) {
+        std::ostringstream output;
+        output << '[';
+        for (std::size_t i = 0; i < patients.size(); ++i) {
+            if (i > 0U) {
+                output << ',';
+            }
+            const PatientRecord& patient = patients[i];
+            output << '{'
+                   << "\"patientId\":" << patient.patientId << ','
+                   << "\"patientName\":\"" << jsonEscape(patient.patientName) << "\"," 
+                   << "\"conditionType\":\"" << jsonEscape(patient.conditionType) << "\"," 
+                   << "\"requiredResourceType\":\"" << jsonEscape(patient.requiredResourceType) << "\"," 
+                   << "\"location\":" << patient.location << ','
+                   << "\"severity\":" << patient.severity << ','
+                   << "\"status\":\"" << jsonEscape(patient.status) << "\"," 
+                   << "\"assignedResourceId\":" << patient.assignedResourceId
+                   << '}';
+        }
+        output << ']';
+        return output.str();
+    }
+
+    static std::string pathJson(const std::vector<int>& path) {
+        std::ostringstream output;
+        output << '[';
+        for (std::size_t i = 0; i < path.size(); ++i) {
+            if (i > 0U) {
+                output << ',';
+            }
+            output << path[i];
         }
         output << ']';
         return output.str();

@@ -4,6 +4,8 @@ let state = {
   waitingCount: 0,
   pending: [],
   resources: [],
+  orderedResources: [],
+  patients: [],
   waiting: [],
   history: [],
 };
@@ -14,8 +16,11 @@ const ids = {
   waitingCount: 'waitingCount',
   heapList: 'heapList',
   resourceList: 'resourceList',
+  orderedResourceList: 'orderedResourceList',
+  patientList: 'patientList',
   waitingList: 'waitingList',
   historyList: 'historyList',
+  routePreview: 'routePreview',
 };
 
 const els = Object.fromEntries(Object.entries(ids).map(([key, value]) => [key, document.getElementById(value)]));
@@ -41,6 +46,21 @@ function renderList(container, items, itemRenderer, emptyText) {
   });
 }
 
+function renderRoutePreview(route) {
+  const container = els.routePreview;
+  if (!route) {
+    container.classList.add('empty');
+    container.textContent = 'No route loaded yet.';
+    return;
+  }
+
+  container.classList.remove('empty');
+  container.innerHTML = `
+    <strong>Patient #${route.patientId} to Resource #${route.resourceId}</strong>
+    <div class="meta">${escapeHtml(route.path.join(' -> '))} | distance ${route.distance} | from ${route.fromLocation} to ${route.toLocation}</div>
+  `;
+}
+
 function render() {
   document.getElementById(ids.pendingCount).textContent = state.pendingCount ?? 0;
   document.getElementById(ids.availableCount).textContent = state.availableCount ?? 0;
@@ -64,6 +84,26 @@ function render() {
       <div class="meta">${resource.available ? 'Available' : `Busy for #${resource.assignedEmergencyId} ${escapeHtml(resource.assignedEmergencyName)}`} | location ${resource.location}</div>
     `,
     'No resources added'
+  );
+
+  renderList(
+    els.orderedResourceList,
+    state.orderedResources,
+    (resource) => `
+      <strong>#${resource.id} ${escapeHtml(resource.type)}</strong>
+      <div class="meta">BST order | ${resource.available ? 'Available' : `Busy for #${resource.assignedEmergencyId} ${escapeHtml(resource.assignedEmergencyName)}`} | location ${resource.location}</div>
+    `,
+    'No ordered resources'
+  );
+
+  renderList(
+    els.patientList,
+    state.patients,
+    (patient) => `
+      <strong>#${patient.patientId} ${escapeHtml(patient.patientName)}</strong>
+      <div class="meta">${escapeHtml(patient.conditionType)} | severity ${patient.severity} | needs ${escapeHtml(patient.requiredResourceType)} | loc ${patient.location} | ${escapeHtml(patient.status)}</div>
+    `,
+    'No patient records'
   );
 
   renderList(
@@ -153,8 +193,49 @@ function wireForms() {
         severity: document.getElementById('severity').value,
         type: document.getElementById('emergencyType').value.trim(),
         requiredResourceType: document.getElementById('requiredResourceType').value.trim(),
+        location: document.getElementById('patientLocation').value,
       });
       event.target.reset();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  document.getElementById('roadForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    try {
+      await postAction('/api/road', {
+        from: document.getElementById('roadFrom').value,
+        to: document.getElementById('roadTo').value,
+        weight: document.getElementById('roadWeight').value,
+      });
+      event.target.reset();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  document.getElementById('routeForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    try {
+      const patientId = document.getElementById('routePatientId').value;
+      const resourceId = document.getElementById('routeResourceId').value.trim();
+      const query = new URLSearchParams({ patientId });
+      if (resourceId) {
+        query.set('resourceId', resourceId);
+      }
+      const response = await fetch(`/api/route?${query.toString()}`);
+      const payload = await response.text();
+      let parsed = null;
+      try {
+        parsed = payload ? JSON.parse(payload) : null;
+      } catch {
+        parsed = null;
+      }
+      if (!response.ok) {
+        throw new Error(parsed?.error || 'Request failed.');
+      }
+      renderRoutePreview(parsed);
     } catch (error) {
       alert(error.message);
     }
@@ -195,6 +276,7 @@ function wireForms() {
   document.getElementById('resetBtn').addEventListener('click', async () => {
     try {
       await postAction('/api/reset');
+      renderRoutePreview(null);
     } catch (error) {
       alert(error.message);
     }

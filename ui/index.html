@@ -15,7 +15,7 @@
       <div>
         <p class="eyebrow">Hospital / Disaster Response Simulator</p>
         <h1>Emergency Resource Allocator</h1>
-        <p class="lede">Prioritize critical cases with a max-heap, assign resources with hashed lookup, and keep overflow cases in a waiting queue.</p>
+        <p class="lede">Prioritize critical cases with a max-heap, assign resources with hashed lookup, index patient records with a linked list, and trace routes through the graph-backed map.</p>
       </div>
       <div class="hero-stats">
         <div>
@@ -58,8 +58,28 @@
             <input id="severity" type="number" min="1" max="10" placeholder="Severity 1-10" required>
             <input id="emergencyType" type="text" placeholder="Type e.g. Trauma" required>
             <input id="requiredResourceType" type="text" placeholder="Required resource type" required>
+            <input id="patientLocation" type="number" placeholder="Patient location" required>
           </div>
           <button type="submit">Add Emergency</button>
+        </form>
+
+        <form id="roadForm" class="panel-form">
+          <h3>Add Road</h3>
+          <div class="form-grid">
+            <input id="roadFrom" type="number" placeholder="From node" required>
+            <input id="roadTo" type="number" placeholder="To node" required>
+            <input id="roadWeight" type="number" min="1" placeholder="Distance" required>
+          </div>
+          <button type="submit">Add Road</button>
+        </form>
+
+        <form id="routeForm" class="panel-form">
+          <h3>Find Patient Route</h3>
+          <div class="form-grid route-grid">
+            <input id="routePatientId" type="number" placeholder="Patient ID" required>
+            <input id="routeResourceId" type="number" placeholder="Optional resource ID">
+          </div>
+          <button type="submit">Show Route</button>
         </form>
 
         <div class="toolbar">
@@ -74,7 +94,7 @@
       <section class="card board wide">
         <div class="section-header">
           <h2>Live State</h2>
-          <p>Priority queue, resources, and waiting cases are shown together.</p>
+          <p>Priority queue, resources, patient registry, and waiting cases are shown together.</p>
         </div>
         <div class="state-grid">
           <div>
@@ -86,10 +106,26 @@
             <div id="resourceList" class="list"></div>
           </div>
           <div>
+            <h3>Ordered Resources</h3>
+            <div id="orderedResourceList" class="list"></div>
+          </div>
+          <div>
+            <h3>Patient Registry</h3>
+            <div id="patientList" class="list"></div>
+          </div>
+          <div>
             <h3>Waiting Queue</h3>
             <div id="waitingList" class="list"></div>
           </div>
         </div>
+      </section>
+
+      <section class="card board wide compact-panel">
+        <div class="section-header">
+          <h2>Route Preview</h2>
+          <p>Resolve a path from a patient to the best matching resource.</p>
+        </div>
+        <div id="routePreview" class="route-preview empty">No route loaded yet.</div>
       </section>
 
       <section class="card board wide compact-panel">

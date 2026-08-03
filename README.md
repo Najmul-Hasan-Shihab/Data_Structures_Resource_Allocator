@@ -1,11 +1,12 @@
 # Emergency Resource Allocator
 
-A C++ data-structures project for hospital or disaster-response triage. The system prioritizes emergencies with a max-heap, tracks resources with a hash table, keeps overflow cases in a queue, and records dispatch history.
+A C++ data-structures project for hospital or disaster-response triage. The system prioritizes emergencies with a max-heap, tracks resources with a hash table, keeps overflow cases in a queue, records dispatch history, stores patients in a linked list, orders resources with a BST, and computes routes with a graph.
 
 ## Why this project works well for a lab final
 
 - Uses core syllabus topics: heaps, priority queues, hashing, queues, and complexity analysis.
 - Has an intuitive real-world story: the most critical patient or rescue case is handled first.
+- Adds extra syllabus-aligned structures: linked lists for patient records, a BST for ordered resources, and a graph for route planning.
 - Supports a clear viva/demo flow: add requests, serve the top priority case, update severity, release resources, and inspect the state.
 
 ## Tech Stack
@@ -29,6 +30,9 @@ A C++ data-structures project for hospital or disaster-response triage. The syst
 - Update a request’s severity and re-order the heap.
 - Add, look up, assign, and release resources using a hash table.
 - Keep overflow cases in a FIFO waiting queue.
+- Maintain a patient registry in a linked list and expose patient lookup.
+- Show resources in BST order for an alternate sorted view.
+- Compute graph-based route suggestions between patient and resource locations.
 - Track allocation history and print system status.
 - Run a built-in demo scenario for presentation.
 
@@ -93,15 +97,17 @@ The web demo is now backed by the C++ server, so the browser is only a presentat
 
 - The current project is a simplified simulator, not a production hospital system.
 - Persistence is not included yet.
-- Graph-based ambulance routing can be added later with BFS or Dijkstra.
+- Persistence is not included yet.
 - Multi-hospital coordination can be added as a future extension.
 
 ## Recommended Demo Script
 
 1. Add 5 to 10 resources.
-2. Add 8 to 12 emergencies with mixed severities.
-3. Show the top priorities.
-4. Serve the highest-priority case several times.
-5. Increase the severity of a waiting case and show it move up.
-6. Release a resource and show the next case being handled.
-7. End with a complexity summary and status view.
+2. Add roads between locations so routing has a visible path.
+3. Add 8 to 12 emergencies with mixed severities and locations.
+4. Show the top priorities.
+5. Serve the highest-priority case several times.
+6. Show the patient registry, ordered resource view, and a route lookup for one patient.
+7. Increase the severity of a waiting case and show it move up.
+8. Release a resource and show the next case being handled.
+9. End with a complexity summary and status view.

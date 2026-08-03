@@ -249,7 +249,7 @@ button.ghost {
 
 .state-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
@@ -261,6 +261,22 @@ button.ghost {
 
 .state-grid > div {
   min-width: 0;
+}
+
+.route-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.route-preview {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.route-preview.empty {
+  color: var(--muted);
 }
 
 .compact-panel {
@@ -300,6 +316,7 @@ button.ghost {
 
   .hero-stats,
   .form-grid,
+  .route-grid,
   .toolbar {
     grid-template-columns: 1fr;
   }

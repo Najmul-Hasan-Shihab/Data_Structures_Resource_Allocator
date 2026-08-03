@@ -11,6 +11,7 @@ struct Emergency {
     int severity = 1;
     std::string type;
     std::string requiredResourceType;
+    int location = 0;
     int arrivalTime = 0;
 };
 
@@ -19,6 +20,7 @@ inline std::ostream& operator<<(std::ostream& os, const Emergency& emergency) {
        << " | severity=" << emergency.severity
        << " | type=" << emergency.type
        << " | needs=" << emergency.requiredResourceType
+       << " | loc=" << emergency.location
        << " | t=" << emergency.arrivalTime;
     return os;
 }

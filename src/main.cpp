@@ -39,7 +39,12 @@ void printMenu() {
               << "4. Update emergency severity\n"
               << "5. Release resource\n"
               << "6. Show status\n"
-              << "7. Run demo scenario\n"
+              << "7. Run screenshot demo\n"
+              << "8. Search patient record\n"
+              << "9. Show ordered resources\n"
+              << "10. Add road connection\n"
+              << "11. Show route for patient\n"
+              << "12. Run verbose demo scenario\n"
               << "0. Exit\n";
 }
 
@@ -66,7 +71,8 @@ int main() {
                 int severity = readInt("Severity (1-10): ");
                 std::string type = readString("Emergency type: ");
                 std::string required = readString("Required resource type: ");
-                service.addEmergency(id, name, severity, type, required);
+                int location = readInt("Patient location node (0 if unknown): ");
+                service.addEmergency(id, name, severity, type, required, location);
                 break;
             }
             case 3:
@@ -88,6 +94,29 @@ int main() {
                 break;
             case 7:
                 service.runDemoScenario();
+                break;
+            case 8: {
+                int id = readInt("Patient ID: ");
+                service.printPatient(id);
+                break;
+            }
+            case 9:
+                service.printOrderedResources();
+                break;
+            case 10: {
+                int from = readInt("From location node: ");
+                int to = readInt("To location node: ");
+                int weight = readInt("Road weight: ");
+                service.addRoad(from, to, weight);
+                break;
+            }
+            case 11: {
+                int id = readInt("Patient ID: ");
+                service.printRouteForPatient(id);
+                break;
+            }
+            case 12:
+                service.runVerboseDemoScenario();
                 break;
             case 0:
                 std::cout << "Exiting.\n";
